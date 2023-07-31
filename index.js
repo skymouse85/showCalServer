@@ -34,101 +34,76 @@ const auth = new google.auth.JWT(
 const TIMEOFFSET = '-08:00';
 
 // Get date-time string for calender
-const dateTimeForCalander = () => {
+// const dateTimeForCalander = () => {
 
-    let date = new Date();
-    // console.log(date)
+//     let date = new Date();
+//     // console.log(date)
 
-    let year = date.getFullYear();
-    let month = date.getMonth() + 1;
-    if (month < 10) {
-        month = `0${month}`;
-    }
-    let day = date.getDate();
-    if (day < 10) {
-        day = `0${day}`;
-    }
-    let hour = date.getHours();
-    if (hour < 10) {
-        hour = `0${hour}`;
-    }
-    let minute = date.getMinutes();
-    if (minute < 10) {
-        minute = `0${minute}`;
-    }
+//     let year = date.getFullYear();
+//     let month = date.getMonth() + 1;
+//     if (month < 10) {
+//         month = `0${month}`;
+//     }
+//     let day = date.getDate();
+//     if (day < 10) {
+//         day = `0${day}`;
+//     }
+//     let hour = date.getHours();
+//     if (hour < 10) {
+//         hour = `0${hour}`;
+//     }
+//     let minute = date.getMinutes();
+//     if (minute < 10) {
+//         minute = `0${minute}`;
+//     }
 
-    let newDateTime = `${year}-${month}-${day}T${hour}:${minute}:00.000${TIMEOFFSET}`;
+//     let newDateTime = `${year}-${month}-${day}T${hour}:${minute}:00.000${TIMEOFFSET}`;
 
-    let event = new Date(Date.parse(newDateTime));
+//     let event = new Date(Date.parse(newDateTime));
 
-    let startDate = event;
-    // Delay in end time is 1
-    let endDate = new Date(new Date(startDate).setHours(startDate.getHours()+1));
+//     let startDate = event;
+//     // Delay in end time is 1
+//     let endDate = new Date(new Date(startDate).setHours(startDate.getHours()+1));
 
-    return {
-        'start': startDate,
-        'end': endDate
-    }
-};
-
-// console.log(dateTimeForCalander());
-
-// Insert new event to Google Calendar
-// const insertEvent = async (event) => {
-
-//     try {
-//         let response = await calendar.events.insert({
-//             auth: auth,
-//             calendarId: calendarId,
-//             resource: event
-//         });
-    
-//         if (response['status'] == 200 && response['statusText'] === 'OK') {
-//             return 1;
-//         } else {
-//             return 0;
-//         }
-//     } catch (error) {
-//         console.log(`Error at insertEvent --> ${error}`);
-//         return 0;
+//     return {
+//         'start': startDate,
+//         'end': endDate
 //     }
 // };
 
-let dateTime = dateTimeForCalander();
+// console.log(dateTimeForCalander());
+
+
+
+// let dateTime = dateTimeForCalander();
 
 // Event for Google Calendar
-let event = {
-    'summary': `This is the summary.`,
-    'description': `This is the description.`,
-    'start': {
-        'dateTime': dateTime['start'],
-        'timeZone': 'Asia/Kolkata'
-    },
-    'end': {
-        'dateTime': dateTime['end'],
-        'timeZone': 'Asia/Kolkata'
-    }
-};
+// let event = {
+//     'summary': `This is the summary.`,
+//     'description': `This is the description.`,
+//     'start': {
+//         'dateTime': dateTime['start'],
+//         'timeZone': 'Asia/Kolkata'
+//     },
+//     'end': {
+//         'dateTime': dateTime['end'],
+//         'timeZone': 'Asia/Kolkata'
+//     }
+// };
 
-// insertEvent(event)
-//     .then((res) => {
-//         console.log(res);
-//     })
-//     .catch((err) => {
-//         console.log(err);
-//     });
+
 
 // Get all the events between two dates
 
 
 const getEvents = async (dateTimeStart, dateTimeEnd) => {
-
     try {
         let response = await calendar.events.list({
             auth: auth,
             calendarId: calendarId,
-            timeMin: dateTimeStart,
-            timeMax: dateTimeEnd,
+            timeMin: dateTimeStart.toISOString(),
+            timeMax: dateTimeEnd.toISOString(),
+            singleEvents: true,
             timeZone: 'America/Los_Angeles'
         });
     
@@ -140,59 +115,55 @@ const getEvents = async (dateTimeStart, dateTimeEnd) => {
     }
 };
 
-let start = (new Date()).toISOString();
-let end = '2099-08-02T00:58:00.000Z';
-
-getEvents(start, end)
-    .then((res) => {
-        console.log(res);
-    })
-    .catch((err) => {
-        console.log(err);
-    });
-    app.get('', async (req, res) => {
-        try {
-            const results = await getEvents(start, end);
-            console.log(results);
-            res.send(results);
-        } catch (error) {
-            console.log(`Error at express route --> ${error}`);
-            res.status(500).send('An error occurred');
-        }
-    });
-
-    app.listen(8080, () => console.log('listening on port http://localhost:8080'));
 
 
 
 
-// Delete an event from eventID
-const deleteEvent = async (eventId) => {
-
+app.get('/events', async (req, res) => {
     try {
-        let response = await calendar.events.delete({
-            auth: auth,
-            calendarId: calendarId,
-            eventId: eventId
-        });
-
-        if (response.data === '') {
-            return 1;
-        } else {
-            return 0;
-        }
+        let start = (new Date()).toISOString();
+        let end = '2099-08-02T00:58:00.000Z';
+        const results = await getEvents(start, end);
+        console.log(results);
+        res.send(results);
     } catch (error) {
-        console.log(`Error at deleteEvent --> ${error}`);
-        return 0;
+        console.log(`Error at express route --> ${error}`);
+        res.status(500).send('An error occurred');
     }
-};
+});
 
-// let eventId = 'hkkdmeseuhhpagc862rfg6nvq4';
 
-// deleteEvent(eventId)
-//     .then((res) => {
-//         console.log(res);
-//     })
-//     .catch((err) => {
-//         console.log(err);
-//     });
+function parseDateFromDay(ymdStr) {
+    return new Date(ymdStr);
+}
+
+// GET /events/2023-06-28/2023-11-22
+app.get('/events/:startDay/:endDay', async (req, res) => {
+    let start, end
+    try {
+        start = new Date(req.params.startDay);
+        start.setHours(0, 0, 0, 0); // start of the day
+
+        end = new Date(req.params.endDay);
+        end.setHours(23, 59, 59, 999); // end of the day
+    } catch (err) {
+        console.error(err)
+        res.status(400).send({error: 'Bad start or end day'})
+        return
+    }
+    let results
+    try {
+        results = await getEvents(start, end)
+    } catch (error) {
+        console.error(error)
+        res.status(500).send({error: 'An internal error occurred'})
+        return
+    }
+    res.send(results)
+})
+app.listen(8080, () => console.log('listening on port http://localhost:8080'));
+
+
+
+
+

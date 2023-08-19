@@ -10,10 +10,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// const {google} = require('googleapis');
-// const { OAuth2} = google.auth;
 
-// require('dotenv').config();
 
 // Provide the required configuration
 const CREDENTIALS = JSON.parse(process.env.CREDENTIALS);

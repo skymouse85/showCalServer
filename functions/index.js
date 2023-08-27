@@ -1,29 +1,12 @@
+/* eslint-disable max-len */
+/* eslint-disable prefer-const */
 /* eslint-disable object-curly-spacing */
 const {onRequest} = require("firebase-functions/v2/https");
 const express = require('express');
 const cors = require('cors');
 const { google } = require('googleapis');
-
-
-// google cloud secret manager
-const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const client = new SecretManagerServiceClient();
-const SCOPES = 'https://www.googleapis.com/auth/calendar';
-const projectName = 'showcalAPI';
-
-
-// eslint-disable-next-line require-jsdoc
-async function getSecret(secretName) {
-  try {
-    const [version] = await client.accessSecretVersion({
-      name: `projects/${projectName}/secrets/${secretName}/versions/latest`,
-    });
-    return version.payload.data.toString();
-  } catch (error) {
-    console.error(`Failed to retrieve secret: ${secretName}`, error);
-    throw new Error(`Failed to retrieve secret: ${secretName}`);
-  }
-}
+const dotenv = require('dotenv');
+dotenv.config();
 
 
 // Initialize express app
@@ -31,34 +14,47 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-let CREDENTIALS;
-let auth;
 
-(async () => {
-  try {
-    const cred = await getSecret('showCal-credentials');
-    CREDENTIALS = JSON.parse(cred);
+// Provide the required configuration
+const CREDENTIALS = JSON.parse(process.env.CREDENTIALS);
+const calendarId = process.env.CALENDAR_ID;
 
-    auth = new google.auth.JWT(
-        CREDENTIALS.client_email,
-        null,
-        CREDENTIALS.private_key,
-        SCOPES,
-    );
-  } catch (error) {
-    console.error(`Error initalizing app credentials and auth:`, error);
-  }
-})();
+// Google calendar API settings
+const SCOPES = 'https://www.googleapis.com/auth/calendar';
+const calendar = google.calendar({version: "v3"});
+
+const auth = new google.auth.JWT(
+    CREDENTIALS.client_email,
+    null,
+    CREDENTIALS.private_key,
+    SCOPES,
+);
 
 
-const calendar = google.calendar({ version: "v3" });
+// get all events between two dates
+// const getEvents = async (dateTimeStart, dateTimeEnd) => {
+//   try {
+//     const response = await calendar.events.list({
+//       auth: auth,
+//       calendarId: calendarId,
+//       timeMin: dateTimeStart.toISOString(),
+//       timeMax: dateTimeEnd.toISOString(),
+//       singleEvents: true,
+//       timeZone: 'America/Los_Angeles',
+//     });
 
-const calendarId = "8aeeql20in6th1kdmgvhojqdqo@group.calendar.google.com";
+//     console.log(response);
 
-
+//     const items = response['data']['items'];
+//     return items;
+//   } catch (error) {
+//     console.error("Error at getEvents:", error);
+//     return null;
+//   }
+// };
 const getEvents = async (dateTimeStart, dateTimeEnd) => {
   try {
-    const response = await calendar.events.list({
+    let response = await calendar.events.list({
       auth: auth,
       calendarId: calendarId,
       timeMin: dateTimeStart.toISOString(),
@@ -66,11 +62,10 @@ const getEvents = async (dateTimeStart, dateTimeEnd) => {
       singleEvents: true,
       timeZone: 'America/Los_Angeles',
     });
-
-    const items = response['data']['items'];
+    let items = response['data']['items'];
     return items;
   } catch (error) {
-    console.error(`Error at getEvents --> ${error}`);
+    console.error("Error at getEvents:", error);
     return null;
   }
 };
@@ -78,24 +73,39 @@ const getEvents = async (dateTimeStart, dateTimeEnd) => {
 // event route
 
 app.get('/events', async (req, res) => {
-  if (!auth) {
-    // eslint-disable-next-line max-len
-    return res.status(500).send('Server is not properly initialized. Try again later.');
-  }
   try {
-    const start = (new Date()).toISOString();
-    const end = '2099-08-02T00:58:00.000Z';
+    let start = new Date(); // Changed this line
+    let end = new Date('2099-08-02T00:58:00.000Z'); // Changed this line
     const results = await getEvents(start, end);
     console.log(results);
     res.send(results);
   } catch (error) {
-    console.error(`Error at express route --> ${error}`);
-    res.status(500).send('There was an error retrieving the events');
+    console.log(`Error at express route --> ${error}`);
+    res.status(500).send('An error occurred');
   }
 });
 
+// app.get('/events', async (req, res) => {
+//   if (!auth) {
+//     // eslint-disable-next-line max-len, max-len, max-len, max-len
+//     return res.status(500).send('Server is not properly initialized. Try again later.');
+//   }
+//   try {
+//     const start = (new Date()).toISOString();
+//     const end = '2099-08-02T00:58:00.000Z';
+//     const results = await getEvents(start, end);
+//     console.log("Type of dateTimeStart:", typeof(dateTimeStart), dateTimeStart);
+//     console.log("Type of dateTimeEnd:", typeof(dateTimeEnd), dateTimeEnd);
+//     console.log(results);
+//     res.send(results);
+//   } catch (error) {
+//     console.error(`Error at express route --> ${error}`);
+//     res.status(500).send('There was an error retrieving the events');
+//   }
+// });
+
 // function parseDateFromDay(ymdStr) {
-//     return new Date(ymdStr);
+//   return new Date(ymdStr);
 // }
 
 app.get('/events/:startDay/:endDay', async (req, res) => {
@@ -130,3 +140,47 @@ app.get('/events/:startDay/:endDay', async (req, res) => {
 exports.app = onRequest(app);
 
 
+// google cloud secret manager
+// const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+// const client = new SecretManagerServiceClient();
+// const SCOPES = 'https://www.googleapis.com/auth/calendar';
+// const projectName = 'showcalapi';
+
+
+// eslint-disable-next-line require-jsdoc
+// async function getSecret(secretName) {
+//   try {
+//     const [version] = await client.accessSecretVersion({
+//       name: `projects/${projectName}/secrets/${secretName}/versions/latest`,
+//     });
+//     return version.payload.data.toString();
+//   } catch (error) {
+//     console.error(`Failed to retrieve secret: ${secretName}`, error);
+//     throw new Error(`Failed to retrieve secret: ${secretName}`);
+//   }
+// }
+
+// let CREDENTIALS;
+// let auth;
+
+// (async () => {
+//   try {
+//     const cred = await getSecret('showCal-credentials');
+//     CREDENTIALS = JSON.parse(cred);
+
+//     auth = new google.auth.JWT(
+//         CREDENTIALS.client_email,
+//         null,
+//         CREDENTIALS.private_key,
+//         SCOPES,
+//     );
+//     // eslint-disable-next-line max-len
+//   } catch (error) {
+//     console.error(`Error initalizing app credentials and auth:`, error);
+//   }
+// })();
+
+
+// const calendar = google.calendar({ version: "v3" });
+
+// const calendarId = "8aeeql20in6th1kdmgvhojqdqo@group.calendar.google.com";
